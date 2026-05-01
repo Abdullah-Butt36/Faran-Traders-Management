@@ -104,10 +104,8 @@ function Login() {
           </button>
         </form>
 
-        {/* Footer */}
         <div className="text-center mt-8 text-[13px] font-medium text-slate-400">
-          <p className="mb-2">&copy; {new Date().getFullYear()} Faran Traders • Version 2.0</p>
-          <p>Don't have an account? <Link to="/signup" className="text-indigo-600 font-bold hover:underline">Sign Up</Link></p>
+          <p>&copy; {new Date().getFullYear()} Faran Traders • Version 3.0</p>
         </div>
       </div>
 

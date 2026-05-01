@@ -100,6 +100,17 @@ The application will be available at `http://localhost:5173`.
 
 ---
 
+## 🔑 Default Admin Credentials
+
+Because this is a private business management system, public sign-ups are disabled. Use the following master credentials to log in:
+
+- **Email**: `admin@gmail.com`
+- **Password**: `admin123`
+
+*(Note: You can change the password from the Security tab inside the Dashboard)*
+
+---
+
 ## 🌐 Deployment
 
 This application is ready to be deployed on **Vercel**.

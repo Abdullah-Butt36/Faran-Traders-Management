@@ -11,7 +11,6 @@ import Home from './pages/Home';
 import Features from './pages/Features';
 import About from './pages/About';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
 import DashboardHome from './pages/Dashboard/DashboardHome';
 import Customers from './pages/Dashboard/Customers';
 import Suppliers from './pages/Dashboard/Suppliers';
@@ -43,7 +42,6 @@ function AppContent() {
           <Route path="/features" element={<><Navbar /><div className="flex-grow"><PageTransition key="features"><Features /></PageTransition></div><Footer /></>} />
           <Route path="/about" element={<><Navbar /><div className="flex-grow"><PageTransition key="about"><About /></PageTransition></div><Footer /></>} />
           <Route path="/login" element={<PageTransition key="login"><Login /></PageTransition>} />
-          <Route path="/signup" element={<PageTransition key="signup"><Signup /></PageTransition>} />
           
           {/* Protected Dashboard Routes */}
           <Route path="/dashboard" element={<ProtectedRoute><DashboardHome /></ProtectedRoute>} />

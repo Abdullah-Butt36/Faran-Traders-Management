@@ -3,6 +3,7 @@ import DashboardLayout from '../../components/Dashboard/DashboardLayout';
 import DeleteConfirmModal from '../../components/Dashboard/DeleteConfirmModal';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 function Suppliers() {
   const [suppliers, setSuppliers] = useState([]);
@@ -13,6 +14,7 @@ function Suppliers() {
   const [saving, setSaving] = useState(false);
   const [selectedSupplierId, setSelectedSupplierId] = useState(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null });
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -227,8 +229,11 @@ function Suppliers() {
 
                       <td className="px-0 md:px-8 py-4 md:py-5 md:table-cell border-none no-print">
                         <div className="flex justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="flex-grow md:flex-grow-0 h-11 md:h-9 px-4 md:px-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2 border border-emerald-100 font-black text-[10px] uppercase tracking-wider">
-                            <i className="fas fa-file-invoice text-[10px]"></i> Ledger
+                          <button 
+                            onClick={() => navigate(`/ledger?type=Supplier&id=${supplier.id}`)}
+                            className="flex-grow md:flex-grow-0 h-11 md:h-9 px-4 md:px-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center gap-2 border border-slate-200 font-black text-[10px] uppercase tracking-wider"
+                          >
+                            <i className="fas fa-book text-[10px]"></i> Ledger
                           </button>
                           <button 
                             onClick={() => handleEdit(supplier)}
