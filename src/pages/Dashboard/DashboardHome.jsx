@@ -44,20 +44,22 @@ function DashboardHome() {
         { label: 'Stock Alerts', val: `${lowStockCount} Items`, icon: 'fa-bell', color: lowStockCount > 0 ? 'text-rose-600' : 'text-violet-600', bg: lowStockCount > 0 ? 'bg-rose-50' : 'bg-violet-50', desc: lowStockCount > 0 ? 'Urgent Action Needed' : 'All Levels Healthy' }
       ]);
 
-      // 2. Fetch Top Customers (Highest Balance)
+      // 2. Fetch Top Customer (Highest Balance, > 0)
       const { data: topCust } = await supabase
         .from('customers')
         .select('*')
+        .gt('current_balance', 0)
         .order('current_balance', { ascending: false })
-        .limit(5);
+        .limit(1);
       setTopCustomers(topCust || []);
 
-      // 3. Fetch Top Suppliers (Highest Balance)
+      // 3. Fetch Top Supplier (Highest Balance, > 0)
       const { data: topSupp } = await supabase
         .from('suppliers')
         .select('*')
+        .gt('current_balance', 0)
         .order('current_balance', { ascending: false })
-        .limit(5);
+        .limit(1);
       setTopSuppliers(topSupp || []);
 
       // 4. Fetch Low Stock Items
@@ -132,7 +134,7 @@ function DashboardHome() {
         <div className="bg-white rounded-[24px] md:rounded-[32px] border border-slate-100 shadow-sm overflow-hidden min-h-[300px]">
           <div className="p-6 md:p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/20">
             <h3 className="font-black text-slate-900 flex items-center gap-3 text-base md:text-lg uppercase tracking-tight">
-              <i className="fas fa-users text-indigo-600"></i> Top Customers
+              <i className="fas fa-user-star text-indigo-600"></i> Top Customer
             </h3>
             <Link to="/customers" className="bg-white border border-slate-100 px-3 py-1.5 rounded-xl text-[10px] font-black text-indigo-600 hover:bg-indigo-50 transition-all uppercase tracking-widest shadow-sm">View All</Link>
           </div>
@@ -175,7 +177,7 @@ function DashboardHome() {
         <div className="bg-white rounded-[24px] md:rounded-[32px] border border-slate-100 shadow-sm overflow-hidden min-h-[300px]">
           <div className="p-6 md:p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/20">
             <h3 className="font-black text-slate-900 flex items-center gap-3 text-base md:text-lg uppercase tracking-tight">
-              <i className="fas fa-truck text-emerald-600"></i> Top Suppliers
+              <i className="fas fa-truck-loading text-emerald-600"></i> Top Supplier
             </h3>
             <Link to="/suppliers" className="bg-white border border-slate-100 px-3 py-1.5 rounded-xl text-[10px] font-black text-emerald-600 hover:bg-emerald-50 transition-all uppercase tracking-widest shadow-sm">View All</Link>
           </div>

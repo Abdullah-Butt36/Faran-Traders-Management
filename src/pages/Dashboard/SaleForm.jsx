@@ -32,7 +32,7 @@ function SaleForm() {
     try {
       const [{ data: custData, error: custErr }, { data: prodData, error: prodErr }] = await Promise.all([
         supabase.from('customers').select('id, name'),
-        supabase.from('items').select('id, name, current_stock')
+        supabase.from('items').select('id, name, current_stock, min_stock_alert')
       ]);
       
       if (custErr) console.error('Customer Fetch Error:', custErr);
@@ -143,6 +143,11 @@ function SaleForm() {
     e.preventDefault();
     if (loading) return;
 
+    if (!formData.isCash && !formData.customerId) {
+      toast.error('Please select a Customer or mark as Cash Sale');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -188,6 +193,26 @@ function SaleForm() {
         if (product) {
           const newStock = parseFloat(product.current_stock) - parseFloat(item.quantity);
           await supabase.from('items').update({ current_stock: newStock }).eq('id', item.itemId);
+
+          // Dynamic Notification Generation
+          const minAlert = parseFloat(product.min_stock_alert) || 10;
+          if (newStock <= 0) {
+            await supabase.from('notifications').insert([{
+              notification_type: 'Out of Stock',
+              title: 'Item Out of Stock',
+              message: `${product.name} is completely out of stock!`,
+              reference_id: product.id,
+              reference_type: 'items'
+            }]);
+          } else if (newStock <= minAlert) {
+            await supabase.from('notifications').insert([{
+              notification_type: 'Low Stock',
+              title: 'Low Stock Alert',
+              message: `${product.name} is running low (${newStock} units left).`,
+              reference_id: product.id,
+              reference_type: 'items'
+            }]);
+          }
         }
       }
 
@@ -239,13 +264,23 @@ function SaleForm() {
           .single();
         
         if (customer) {
-          // Note: If editing, a full recalculation of customer balance should ideally run.
-          // For now, we apply the net change or you can trigger a sync function later.
           const newCustBalance = (parseFloat(customer.current_balance) || 0) + balance;
           await supabase
             .from('customers')
             .update({ current_balance: newCustBalance })
             .eq('id', formData.customerId);
+            
+          // Large Receivable Notification
+          if (newCustBalance >= 50000) {
+            const custName = customers.find(c => c.id === parseInt(formData.customerId))?.name || 'Customer';
+            await supabase.from('notifications').insert([{
+              notification_type: 'Large Receivable',
+              title: 'Large Receivable Warning',
+              message: `${custName}'s outstanding balance has reached ₨ ${newCustBalance.toLocaleString()}.`,
+              reference_id: parseInt(formData.customerId),
+              reference_type: 'customers'
+            }]);
+          }
         }
       }
 

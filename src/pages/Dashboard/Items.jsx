@@ -100,6 +100,32 @@ function Items() {
         toast.success('Item updated successfully!');
       }
 
+      // Dynamic Notification logic based on manually updated stock
+      const newStock = payload.current_stock;
+      const minAlert = payload.min_stock_alert || 10;
+      // Fetch item id for notification reference
+      const notifId = modalMode === 'edit' ? selectedItem.id : null; 
+      // Note: In Add mode we don't have ID unless we read the inserted data, but newly added items usually aren't 0 stock.
+      if (notifId) {
+        if (newStock <= 0) {
+          await supabase.from('notifications').insert([{
+            notification_type: 'Out of Stock',
+            title: 'Item Out of Stock',
+            message: `${payload.name} is completely out of stock!`,
+            reference_id: notifId,
+            reference_type: 'items'
+          }]);
+        } else if (newStock <= minAlert) {
+          await supabase.from('notifications').insert([{
+            notification_type: 'Low Stock',
+            title: 'Low Stock Alert',
+            message: `${payload.name} is running low (${newStock} units left).`,
+            reference_id: notifId,
+            reference_type: 'items'
+          }]);
+        }
+      }
+
       setShowItemModal(false);
       resetForm();
       fetchItems();
@@ -161,6 +187,26 @@ function Items() {
         });
 
       if (logErr) throw logErr;
+
+      // Dynamic Notification logic for Adjustments
+      const minAlert = parseFloat(selectedItem.min_stock_alert) || 10;
+      if (newStock <= 0) {
+        await supabase.from('notifications').insert([{
+          notification_type: 'Out of Stock',
+          title: 'Item Out of Stock',
+          message: `${selectedItem.name} is completely out of stock!`,
+          reference_id: selectedItem.id,
+          reference_type: 'items'
+        }]);
+      } else if (newStock <= minAlert) {
+        await supabase.from('notifications').insert([{
+          notification_type: 'Low Stock',
+          title: 'Low Stock Alert',
+          message: `${selectedItem.name} is running low (${newStock} units left).`,
+          reference_id: selectedItem.id,
+          reference_type: 'items'
+        }]);
+      }
 
       toast.success('Stock adjusted and history logged!');
       setShowAdjustModal(false);

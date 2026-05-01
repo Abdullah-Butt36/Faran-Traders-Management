@@ -1,62 +1,95 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/Dashboard/DashboardLayout';
+import { supabase } from '../../lib/supabase';
+import { toast } from 'react-toastify';
 
 function Notifications() {
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'low_stock',
-      title: 'Low Stock Alert',
-      message: 'Organic Cotton Tee is below minimum level (8 units left).',
-      is_read: false,
-      time: '5 minutes ago'
-    },
-    {
-      id: 2,
-      type: 'new_sale',
-      title: 'New Sale Invoice',
-      message: 'Invoice INV-2024-001 generated for Ali Ahmed (₨ 12,500).',
-      is_read: true,
-      time: '2 hours ago'
-    },
-    {
-      id: 3,
-      type: 'payment_received',
-      title: 'Payment Received',
-      message: '₨ 45,000 received from Sara Khan.',
-      is_read: false,
-      time: '1 day ago'
-    },
-    {
-      id: 4,
-      type: 'expense_alert',
-      title: 'Large Expense Logged',
-      message: '₨ 45,000 recorded for Warehouse Rent.',
-      is_read: true,
-      time: '3 days ago'
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchNotifications = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setNotifications(data || []);
+    } catch (error) {
+      toast.error('Failed to load notifications');
+    } finally {
+      setLoading(false);
     }
-  ]);
-
-  const markAsRead = (id) => {
-    setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
   };
 
-  const markAllRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+  useEffect(() => {
+    fetchNotifications();
+
+    const subscription = supabase
+      .channel('notifications_page')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+        fetchNotifications();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
+  const markAsRead = async (id) => {
+    try {
+      const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+      if (error) throw error;
+      setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
+    } catch (err) {
+      toast.error('Error marking as read');
+    }
   };
 
-  const deleteNotification = (id) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+  const markAllRead = async () => {
+    try {
+      const { error } = await supabase.from('notifications').update({ is_read: true }).eq('is_read', false);
+      if (error) throw error;
+      setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+      toast.success('All marked as read');
+    } catch (err) {
+      toast.error('Error marking all as read');
+    }
+  };
+
+  const deleteNotification = async (id) => {
+    try {
+      const { error } = await supabase.from('notifications').delete().eq('id', id);
+      if (error) throw error;
+      setNotifications(notifications.filter(n => n.id !== id));
+      toast.success('Notification deleted');
+    } catch (err) {
+      toast.error('Error deleting notification');
+    }
   };
 
   const getIcon = (type) => {
     switch (type) {
-      case 'low_stock': return { icon: 'fa-exclamation-triangle', color: 'text-amber-500', bg: 'bg-amber-50' };
-      case 'new_sale': return { icon: 'fa-shopping-cart', color: 'text-indigo-600', bg: 'bg-indigo-50' };
-      case 'payment_received': return { icon: 'fa-check-circle', color: 'text-emerald-600', bg: 'bg-emerald-50' };
-      case 'expense_alert': return { icon: 'fa-money-bill-wave', color: 'text-rose-600', bg: 'bg-rose-50' };
+      case 'Low Stock': return { icon: 'fa-exclamation-triangle', color: 'text-amber-500', bg: 'bg-amber-50' };
+      case 'Out of Stock': return { icon: 'fa-times-circle', color: 'text-rose-600', bg: 'bg-rose-50' };
+      case 'Payment Due': return { icon: 'fa-clock', color: 'text-indigo-600', bg: 'bg-indigo-50' };
+      case 'Large Receivable': return { icon: 'fa-money-bill-wave', color: 'text-emerald-600', bg: 'bg-emerald-50' };
       default: return { icon: 'fa-bell', color: 'text-slate-400', bg: 'bg-slate-50' };
     }
+  };
+
+  const timeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = new Date() - new Date(dateStr);
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
   };
 
   return (
@@ -78,9 +111,11 @@ function Notifications() {
         </div>
 
         <div className="space-y-4 mb-10">
-          {notifications.length > 0 ? (
+          {loading ? (
+            <div className="flex justify-center p-10"><i className="fas fa-spinner fa-spin text-3xl text-indigo-600"></i></div>
+          ) : notifications.length > 0 ? (
             notifications.map((noti) => {
-              const style = getIcon(noti.type);
+              const style = getIcon(noti.notification_type);
               return (
                 <div 
                   key={noti.id} 
@@ -96,7 +131,7 @@ function Notifications() {
                         {noti.title}
                       </h3>
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                        {noti.time}
+                        {timeAgo(noti.created_at)}
                       </span>
                     </div>
                     <p className={`text-xs md:text-sm font-medium leading-relaxed ${noti.is_read ? 'text-slate-400' : 'text-slate-600'}`}>

@@ -127,6 +127,11 @@ function PurchaseForm() {
     e.preventDefault();
     if (loading) return;
 
+    if (!formData.isCash && !formData.supplierId) {
+      toast.error('Please select a Supplier or mark as Cash Purchase');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -228,6 +233,18 @@ function PurchaseForm() {
             .from('suppliers')
             .update({ current_balance: newSuppBalance })
             .eq('id', formData.supplierId);
+
+          // Payment Due Notification
+          if (newSuppBalance >= 50000) {
+            const suppName = suppliers.find(s => s.id === parseInt(formData.supplierId))?.name || 'Supplier';
+            await supabase.from('notifications').insert([{
+              notification_type: 'Payment Due',
+              title: 'High Payable Alert',
+              message: `You owe ${suppName} ₨ ${newSuppBalance.toLocaleString()}. Please schedule a payment.`,
+              reference_id: parseInt(formData.supplierId),
+              reference_type: 'suppliers'
+            }]);
+          }
         }
       }
 

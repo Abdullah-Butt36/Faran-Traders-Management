@@ -13,7 +13,7 @@
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap');
 
   html, body {
-    @apply bg-white text-slate-900 m-0 p-0 min-h-screen overflow-x-hidden selection:bg-indigo-100;
+    @apply bg-white text-slate-900 m-0 p-0 min-h-screen overflow-x-hidden selection:bg-indigo-100 font-semibold;
     scrollbar-width: none;
     -ms-overflow-style: none;
   }

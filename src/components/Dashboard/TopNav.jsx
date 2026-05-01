@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 function TopNav({ pageTitle = 'Dashboard', onMenuClick }) {
   const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState({ customers: [], suppliers: [], items: [] });
+  const [isSearching, setIsSearching] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const searchRef = useRef(null);
+  
   const [showProfile, setShowProfile] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const { user, signOut } = useAuth();
@@ -11,13 +17,88 @@ function TopNav({ pageTitle = 'Dashboard', onMenuClick }) {
 
   const isNotiPage = location.pathname === '/dashboard/notifications';
 
+  useEffect(() => {
+    const fetchSearchResults = async () => {
+      if (search.length < 2) {
+        setSearchResults({ customers: [], suppliers: [], items: [] });
+        return;
+      }
+      
+      setIsSearching(true);
+      try {
+        const [
+          { data: customers },
+          { data: suppliers },
+          { data: items }
+        ] = await Promise.all([
+          supabase.from('customers').select('id, name, city').ilike('name', `%${search}%`).limit(3),
+          supabase.from('suppliers').select('id, name, city').ilike('name', `%${search}%`).limit(3),
+          supabase.from('items').select('id, name, current_stock').ilike('name', `%${search}%`).limit(3)
+        ]);
+
+        setSearchResults({
+          customers: customers || [],
+          suppliers: suppliers || [],
+          items: items || []
+        });
+      } catch (error) {
+        console.error('Search error:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounce = setTimeout(fetchSearchResults, 300);
+    return () => clearTimeout(debounce);
+  }, [search]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_read', false);
+        
+        if (!error && count !== null) {
+          setUnreadCount(count);
+        }
+      } catch (err) {
+        console.error('Error fetching unread notifications:', err);
+      }
+    };
+
+    fetchUnreadCount();
+
+    const subscription = supabase
+      .channel('notifications_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+        fetchUnreadCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
   return (
     <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-4 md:px-8 flex-shrink-0 relative print:hidden">
       {/* Mobile Search Overlay */}
       {isMobileSearchOpen && (
-        <div className="absolute inset-0 z-[60] bg-white flex items-center px-4 animate-fadeIn">
-          <div className="relative flex-grow flex items-center gap-3">
-            <i className="fas fa-search absolute left-0 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <div className="absolute inset-0 z-[60] bg-white flex flex-col px-4 pt-4 animate-fadeIn">
+          <div className="relative flex items-center gap-3 w-full">
+            <i className={`fas ${isSearching ? 'fa-spinner fa-spin' : 'fa-search'} absolute left-0 top-1/2 -translate-y-1/2 text-slate-400`}></i>
             <input 
               autoFocus
               type="text" 
@@ -27,12 +108,57 @@ function TopNav({ pageTitle = 'Dashboard', onMenuClick }) {
               onChange={(e) => setSearch(e.target.value)}
             />
             <button 
-              onClick={() => setIsMobileSearchOpen(false)}
+              onClick={() => { setIsMobileSearchOpen(false); setSearch(''); }}
               className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-rose-600 transition-colors"
             >
               <i className="fas fa-times text-xl"></i>
             </button>
           </div>
+
+          {/* Mobile Dropdown Results */}
+          {search.length >= 2 && (
+            <div className="flex-grow overflow-y-auto mt-2 pb-4">
+              {/* Customers */}
+              {searchResults.customers.length > 0 && (
+                <div className="mb-4">
+                  <p className="px-2 py-1 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Customers</p>
+                  {searchResults.customers.map(c => (
+                    <Link key={c.id} to={`/ledger?type=Customer&id=${c.id}`} onClick={() => { setSearch(''); setIsMobileSearchOpen(false); }} className="block px-2 py-3 border-b border-slate-50 active:bg-indigo-50">
+                      <p className="text-sm font-bold text-slate-900">{c.name}</p>
+                      <p className="text-[10px] text-slate-500">{c.city || 'N/A'}</p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {/* Suppliers */}
+              {searchResults.suppliers.length > 0 && (
+                <div className="mb-4">
+                  <p className="px-2 py-1 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Suppliers</p>
+                  {searchResults.suppliers.map(s => (
+                    <Link key={s.id} to={`/ledger?type=Supplier&id=${s.id}`} onClick={() => { setSearch(''); setIsMobileSearchOpen(false); }} className="block px-2 py-3 border-b border-slate-50 active:bg-emerald-50">
+                      <p className="text-sm font-bold text-slate-900">{s.name}</p>
+                      <p className="text-[10px] text-slate-500">{s.city || 'N/A'}</p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {/* Items */}
+              {searchResults.items.length > 0 && (
+                <div className="mb-4">
+                  <p className="px-2 py-1 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Items</p>
+                  {searchResults.items.map(i => (
+                    <Link key={i.id} to="/items" onClick={() => { setSearch(''); setIsMobileSearchOpen(false); }} className="block px-2 py-3 border-b border-slate-50 active:bg-violet-50">
+                      <p className="text-sm font-bold text-slate-900">{i.name}</p>
+                      <p className="text-[10px] text-slate-500">In Stock: {i.current_stock}</p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {searchResults.customers.length === 0 && searchResults.suppliers.length === 0 && searchResults.items.length === 0 && !isSearching && (
+                <div className="p-4 text-center text-slate-500 text-sm font-medium">No matches found</div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -48,16 +174,61 @@ function TopNav({ pageTitle = 'Dashboard', onMenuClick }) {
         </div>
       </div>
 
-      <div className="flex-grow max-w-xl px-4 md:px-12 hidden md:block">
+      <div className="flex-grow max-w-xl px-4 md:px-12 hidden md:block" ref={searchRef}>
         <div className="relative group">
-          <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors"></i>
+          <i className={`fas ${isSearching ? 'fa-spinner fa-spin' : 'fa-search'} absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors`}></i>
           <input 
             type="text" 
-            placeholder="Search..."
+            placeholder="Search customers, suppliers, items..."
             className="w-full bg-slate-100 border-none rounded-2xl py-2.5 pl-12 pr-6 text-sm focus:ring-2 focus:ring-indigo-600/20 focus:bg-white transition-all"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          
+          {/* Dropdown Results */}
+          {search.length >= 2 && (
+            <div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-xl border border-slate-100 py-3 z-[100] max-h-[400px] overflow-y-auto animate-fadeIn">
+              {/* Customers */}
+              {searchResults.customers.length > 0 && (
+                <div className="mb-2">
+                  <p className="px-4 py-1 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50">Customers</p>
+                  {searchResults.customers.map(c => (
+                    <Link key={c.id} to={`/ledger?type=Customer&id=${c.id}`} onClick={() => setSearch('')} className="block px-4 py-2 hover:bg-indigo-50 transition-colors">
+                      <p className="text-sm font-bold text-slate-900">{c.name}</p>
+                      <p className="text-[10px] text-slate-500">{c.city || 'N/A'}</p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {/* Suppliers */}
+              {searchResults.suppliers.length > 0 && (
+                <div className="mb-2">
+                  <p className="px-4 py-1 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50">Suppliers</p>
+                  {searchResults.suppliers.map(s => (
+                    <Link key={s.id} to={`/ledger?type=Supplier&id=${s.id}`} onClick={() => setSearch('')} className="block px-4 py-2 hover:bg-emerald-50 transition-colors">
+                      <p className="text-sm font-bold text-slate-900">{s.name}</p>
+                      <p className="text-[10px] text-slate-500">{s.city || 'N/A'}</p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {/* Items */}
+              {searchResults.items.length > 0 && (
+                <div>
+                  <p className="px-4 py-1 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50">Items</p>
+                  {searchResults.items.map(i => (
+                    <Link key={i.id} to="/items" onClick={() => setSearch('')} className="block px-4 py-2 hover:bg-violet-50 transition-colors">
+                      <p className="text-sm font-bold text-slate-900">{i.name}</p>
+                      <p className="text-[10px] text-slate-500">In Stock: {i.current_stock}</p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {searchResults.customers.length === 0 && searchResults.suppliers.length === 0 && searchResults.items.length === 0 && !isSearching && (
+                <div className="p-4 text-center text-slate-500 text-sm font-medium">No matches found</div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -86,8 +257,10 @@ function TopNav({ pageTitle = 'Dashboard', onMenuClick }) {
           title={isNotiPage ? "Back to Dashboard" : "View Notifications"}
         >
           <i className={`fas ${isNotiPage ? 'fa-arrow-left' : 'fa-bell'} text-lg md:text-xl group-hover:shake`}></i>
-          {!isNotiPage && (
-            <span className="absolute top-0.5 right-0.5 md:top-1 md:right-1 w-4 h-4 bg-rose-500 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-[8px] font-black text-white">2</span>
+          {!isNotiPage && unreadCount > 0 && (
+            <span className="absolute top-0.5 right-0.5 md:top-1 md:right-1 w-4 h-4 bg-rose-500 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-[8px] font-black text-white">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
           )}
         </Link>
 
