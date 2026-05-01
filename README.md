@@ -1,304 +1,113 @@
-# 🚀 Faran Traders - Business Management System
+# Faran Traders - Business Management System
 
-A complete, modern, and beautiful business management system with inventory tracking, customer/supplier management, sales/purchase modules, and profit/loss calculations.
-
-## ✨ Features
-
-### 💰 Dashboard
-- **Real-time Money Overview**: Total Receivable, Payable, Cash in Hand
-- **Profit & Loss Tracking**: Automatic calculations
-- **Top Parties**: View top customers and suppliers
-- **Inventory Alerts**: Low stock and out of stock notifications
-- **Recent Transactions**: Quick access to latest activities
-
-### 👥 Customer & Supplier Management
-- Add/Edit/Delete customers and suppliers
-- City-wise search and filtering
-- Complete ledger view
-- Opening balance management
-- Regular and one-time party types
-
-### 📦 Inventory Management
-- Real-time stock tracking
-- Automatic stock updates on sales/purchases
-- Low stock alerts (< 10 items)
-- Out of stock notifications
-- Category-wise organization
-
-### 💵 Sales & Purchase Modules
-- Multi-item invoices
-- Auto-generated invoice numbers
-- Dynamic pricing
-- Automatic calculations
-- Transport and expense tracking
-
-### 📊 Ledger System
-- Complete transaction history
-- Debit/Credit tracking
-- Running balance
-- PDF export functionality
-- Date range filtering
-
-### 🎨 Design Features
-- **Modern Dark Theme**: Professional gradient design
-- **Smooth Animations**: Fade-in, slide, and scale effects
-- **Glassmorphism**: Backdrop blur effects
-- **Responsive Design**: Works on all devices
-- **Interactive Elements**: Hover effects and transitions
-
-## 🛠️ Technology Stack
-
-- **Frontend**: HTML5, CSS3, JavaScript
-- **Backend**: PHP 7.4+
-- **Database**: MySQL 5.7+
-- **Icons**: Font Awesome 6.4
-- **Fonts**: Google Fonts (Inter)
-- **Charts**: Chart.js
-- **3D Effects**: Three.js
-
-## 📋 Requirements
-
-- XAMPP (or any PHP/MySQL server)
-- PHP 7.4 or higher
-- MySQL 5.7 or higher
-- Modern web browser (Chrome, Firefox, Edge)
-
-## 🚀 Installation
-
-### Step 1: Setup XAMPP
-1. Install XAMPP from [https://www.apachefriends.org](https://www.apachefriends.org)
-2. Start Apache and MySQL services
-
-### Step 2: Database Setup
-1. Open phpMyAdmin: `http://localhost:8080/phpmyadmin`
-2. Create a new database or import the SQL file:
-   ```sql
-   mysql -u root -p < database.sql
-   ```
-   Or manually:
-   - Click "New" to create database named `faran_traders`
-   - Select the database
-   - Click "Import" tab
-   - Choose `database.sql` file
-   - Click "Go"
-
-### Step 3: Configure Database Connection
-1. Open `config.php`
-2. Update database credentials if needed:
-   ```php
-   define('DB_HOST', 'localhost');
-   define('DB_USER', 'root');
-   define('DB_PASS', '');
-   define('DB_NAME', 'faran_traders');
-   ```
-
-### Step 4: Access the Application
-1. Open your browser
-2. Navigate to: `http://localhost:8080/Faran_Traders/`
-3. Login with default credentials:
-   - **Username**: `admin`
-   - **Password**: `admin125` if password is inavlid go to admin-reset
-
-## 📁 Project Structure
-
-```
-Faran_Traders/
-├── assets/
-│   ├── css/
-│   │   └── style.css          # Main stylesheet with animations
-│   ├── js/
-│   │   └── main.js            # JavaScript functionality
-│   └── images/
-├── includes/
-│   ├── header.php             # HTML head and meta tags
-│   ├── navbar.php             # Sidebar and top navigation
-│   ├── footer.php             # Footer and scripts
-│   └── functions.php          # Utility functions
-├── config.php                 # Database configuration
-├── database.sql               # Database schema
-├── index.php                  # Entry point
-├── login.php                  # Login page
-├── logout.php                 # Logout handler
-├── dashboard.php              # Main dashboard
-├── customers.php              # Customer management
-├── suppliers.php              # Supplier management
-├── items.php                  # Item management
-├── inventory.php              # Inventory tracking
-├── sales.php                  # Sales module
-├── purchases.php              # Purchase module
-├── ledger.php                 # Ledger system
-└── profit_loss.php            # Profit & Loss reports
-```
-
-## 🎯 Default Login Credentials
-
-- **Username**: `admin`
-- **Password**: `admin123`
-
-⚠️ **Important**: Change the default password after first login!
-
-## 🎨 Design Highlights
-
-### Color Scheme
-- **Primary**: Purple gradient (#667eea → #764ba2)
-- **Background**: Dark theme (#0f172a)
-- **Accent Green**: #10b981
-- **Warning**: #f59e0b
-- **Danger**: #ef4444
-
-### Animations
-- ✨ Fade-in effects on page load
-- 🎭 Smooth transitions on hover
-- 📊 Animated number counting
-- 🔄 Loading spinners
-- 💫 Floating logo animation
-- 🌊 Background pulse effects
-
-### Interactive Elements
-- Hover effects on all cards
-- Smooth sidebar toggle
-- Real-time search
-- Notification panel
-- Animated alerts
-
-## 📱 Responsive Design
-
-The system is fully responsive and works on:
-- 💻 Desktop (1920px+)
-- 💻 Laptop (1366px+)
-- 📱 Tablet (768px+)
-- 📱 Mobile (320px+)
-
-## 🔐 Security Features
-
-- Password hashing (bcrypt)
-- SQL injection prevention
-- XSS protection
-- Session management
-- Input sanitization
-
-## 📊 Database Schema
-
-### Main Tables
-1. **users** - System users
-2. **customers** - Customer records
-3. **suppliers** - Supplier records
-4. **items** - Product catalog
-5. **sales** - Sales transactions
-6. **sale_items** - Sale line items
-7. **purchases** - Purchase transactions
-8. **purchase_items** - Purchase line items
-9. **transactions** - Unified ledger
-10. **expenses** - Business expenses
-11. **notifications** - System notifications
-
-## 🚧 Development Status
-
-### ✅ Completed
-- Database schema
-- Core backend functions
-- Authentication system
-- Dashboard with stats
-- Login page with animations
-- Premium UI design
-- Responsive layout
-
-### 🔄 In Progress
-- Customer management module
-- Supplier management module
-- Item management module
-- Sales module
-- Purchase module
-- Ledger system
-- PDF generation
-- Notification system
-
-### 📅 Upcoming
-- Reports module
-- Settings page
-- User management
-- Backup/Restore
-- Email notifications
-- Mobile app
-
-## 🎓 Usage Guide
-
-### Adding a Customer
-1. Go to "Customers" from sidebar
-2. Click "Add New Customer"
-3. Fill in details (Name, Phone, City, Type)
-4. Set opening balance if any
-5. Click "Save"
-
-### Making a Sale
-1. Go to "Sales" from sidebar
-2. Click "New Sale"
-3. Select customer
-4. Add items with quantity and rate
-5. Enter payment received
-6. Click "Save" - Stock and ledger auto-update
-
-### Viewing Ledger
-1. Go to "Ledger" from sidebar
-2. Select party type (Customer/Supplier)
-3. Select party name
-4. Choose date range
-5. View transactions
-6. Export to PDF if needed
-
-### Checking Inventory
-1. Go to "Inventory" from sidebar
-2. View all items with stock levels
-3. Red badge = Out of stock
-4. Yellow badge = Low stock
-5. Click item for details
-
-## 🐛 Troubleshooting
-
-### Database Connection Error
-- Check XAMPP MySQL is running
-- Verify database credentials in `config.php`
-- Ensure database `faran_traders` exists
-
-### Login Not Working
-- Clear browser cache
-- Check database has user record
-- Verify password hash in database
-
-### Styles Not Loading
-- Check `assets/css/style.css` exists
-- Clear browser cache
-- Check file permissions
-
-### JavaScript Not Working
-- Check browser console for errors
-- Ensure `assets/js/main.js` is loaded
-- Check for JavaScript conflicts
-
-## 📞 Support
-
-For issues or questions:
-- Check the documentation
-- Review the code comments
-- Test with default data
-
-## 📄 License
-
-This project is created for Faran Traders business management.
-
-## 🙏 Credits
-
-- **Design**: Modern dark theme with glassmorphism
-- **Icons**: Font Awesome
-- **Fonts**: Google Fonts (Inter)
-- **Framework**: Custom PHP/MySQL
+A complete, modern, and highly responsive business management system built to streamline operations for trading businesses. It provides end-to-end management from inventory tracking and party ledgers to dynamic sales, purchases, and automated financial reporting.
 
 ---
 
-**Made with ❤️ for Faran Traders**
+## 📑 Core Modules & Page Functionality
 
-**Version**: 1.0.0  
-**Last Updated**: December 2025
+### 1. 📊 Dashboard (Home)
+The nerve center of the application providing real-time business insights.
+- **Financial Overview**: Live tracking of Total Receivables, Total Payables, and Net Balance.
+- **Interactive Charts**: Visual representation of the last 6 months' revenue and profit trends.
+- **Quick Stats**: Summaries of today's sales, purchases, and expenses.
+- **Stock Alerts**: Automated warnings for items running low or completely out of stock.
+- **Recent Activity**: Quick view of the latest transactions across all modules.
 
-**Version**: 2.0.0  
-**Last Updated**: March 2026
+### 2. 🛒 Sales Module
+Complete point-of-sale and invoicing system.
+- **Dynamic Invoicing**: Create multi-item sale invoices with auto-calculated totals, discounts, and net amounts.
+- **Stock Automation**: Selling an item automatically deducts it from the central inventory.
+- **Ledger Integration**: Unpaid amounts are automatically added to the customer's receivable ledger.
+- **Print-Ready Invoices**: One-click generation of professional, A4-optimized sales receipts.
+
+### 3. 📦 Purchase Module
+Manage incoming stock and supplier accounts.
+- **Purchase Recording**: Log incoming shipments with dynamic pricing and item quantities.
+- **Auto-Restock**: Purchasing automatically increases the inventory levels.
+- **Payable Tracking**: Unpaid purchase amounts are instantly reflected in the supplier's payable ledger.
+- **Printable Records**: Generate clean, professional purchase records for physical filing.
+
+### 4. 🗄️ Inventory (Items & Stock Report)
+Comprehensive catalog and warehouse management.
+- **Item Master**: Add and edit products with base units (e.g., Pcs, Kg, Bags) and custom minimum-stock thresholds.
+- **Real-Time Tracking**: Live view of current available quantities.
+- **Stock Movement Report**: A dedicated reporting page showing Opening Stock, In/Out movements, and Closing Balance for any given date range.
+
+### 5. 👥 Customers & Suppliers
+Dedicated CRM and party management.
+- **Profile Management**: Maintain detailed records including contact info, addresses, and party types.
+- **Live Balances**: Instantly view how much money a specific customer owes or how much you owe a supplier.
+- **Financial History**: Acts as the foundation for the Ledger system.
+
+### 6. 💸 Expenses Management
+Track operational costs to maintain accurate net profit calculations.
+- **Categorized Tracking**: Log expenses by categories (Utilities, Salaries, Rent, Transport, etc.).
+- **Date Filtering**: View operational costs over specific days, weeks, or months.
+- **Expense Reporting**: Generate and print aggregated expense reports.
+
+### 7. 📈 Profit & Loss Statement
+Automated financial health analysis.
+- **Income Statement**: Dynamically calculates Total Revenue vs. Total Cost of Goods Sold (COGS) and Operating Expenses.
+- **Net Result**: Instantly outputs the final Net Profit or Loss for any selected period.
+- **Executive Printing**: Print clean, numbers-focused financial statements without UI clutter for stakeholder meetings.
+
+### 8. 🖨️ Professional Printing Suite
+Built-in CSS logic to convert web views into physical documents.
+- **A4 Optimization**: All printable pages automatically resize and format perfectly for standard A4 paper.
+- **UI Clutter Removal**: Navigation bars, sidebars, and action buttons are automatically hidden during print.
+- **Branded Documents**: Prints include localized business branding (Faran Traders, Wazirabad Sohdra).
+
+---
+
+## 🛠️ Technology Stack
+
+- **Frontend**: React 18, Vite
+- **Styling**: Tailwind CSS (Utility-first framework for responsive UI)
+- **Routing**: React Router DOM v6
+- **Backend & Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
+- **Data Visualization**: Chart.js / React-Chartjs-2
+- **Alerts & Modals**: React Toastify & Custom Animated Modals
+
+---
+
+## 🚀 Installation & Local Development
+
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/Abdullah-Butt36/Faran-Traders-Management.git
+cd Faran-Traders-Management
+```
+
+### Step 2: Install Dependencies
+```bash
+npm install
+```
+
+### Step 3: Environment Variables
+Create a `.env` file in the root directory and add your Supabase connection strings:
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### Step 4: Run the Application
+```bash
+npm run dev
+```
+The application will be available at `http://localhost:5173`.
+
+---
+
+## 🌐 Deployment
+
+This application is ready to be deployed on **Vercel**.
+1. Ensure your code is pushed to your GitHub repository.
+2. Log in to Vercel and import the repository.
+3. Add the `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` variables in the Vercel project settings.
+4. Deploy the project. Vercel will automatically detect Vite and configure the build settings.
+
+---
+
+**Made for Faran Traders Management**
