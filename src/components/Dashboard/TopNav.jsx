@@ -241,14 +241,6 @@ function TopNav({ pageTitle = 'Dashboard', onMenuClick }) {
           <i className="fas fa-search text-lg"></i>
         </button>
 
-        {/* Home Icon */}
-        <Link 
-          to="/"
-          className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-indigo-600 bg-slate-50 md:bg-transparent rounded-xl md:rounded-none transition-all"
-          title="Back to Landing Page"
-        >
-          <i className="fas fa-home text-lg md:text-xl"></i>
-        </Link>
 
         {/* Notification Bell */}
         <Link 

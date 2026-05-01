@@ -5,11 +5,6 @@ import PageTransition from './components/PageTransition';
 import { AnimatePresence } from 'framer-motion';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import Home from './pages/Home';
-import Features from './pages/Features';
-import About from './pages/About';
 import Login from './pages/Login';
 import DashboardHome from './pages/Dashboard/DashboardHome';
 import Customers from './pages/Dashboard/Customers';
@@ -37,11 +32,8 @@ function AppContent() {
     <div className="min-h-screen flex flex-col bg-white">
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
-          {/* Public Routes - Keep Nav/Footer static, only transition content */}
-          <Route path="/" element={<><Navbar /><div className="flex-grow"><PageTransition key="home"><Home /></PageTransition></div><Footer /></>} />
-          <Route path="/features" element={<><Navbar /><div className="flex-grow"><PageTransition key="features"><Features /></PageTransition></div><Footer /></>} />
-          <Route path="/about" element={<><Navbar /><div className="flex-grow"><PageTransition key="about"><About /></PageTransition></div><Footer /></>} />
-          <Route path="/login" element={<PageTransition key="login"><Login /></PageTransition>} />
+          {/* Main Entry Point - Login Page */}
+          <Route path="/" element={<PageTransition key="login"><Login /></PageTransition>} />
           
           {/* Protected Dashboard Routes */}
           <Route path="/dashboard" element={<ProtectedRoute><DashboardHome /></ProtectedRoute>} />
@@ -65,6 +57,7 @@ function AppContent() {
           <Route path="/sales/print/:id" element={<ProtectedRoute><SaleInvoice /></ProtectedRoute>} />
           <Route path="/purchases/print/:id" element={<ProtectedRoute><PurchaseInvoice /></ProtectedRoute>} />
 
+          {/* Catch-all redirect to Dashboard */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AnimatePresence>
