@@ -1,0 +1,198 @@
+<?php
+require_once 'config.php';
+require_once 'includes/functions.php';
+
+requireLogin();
+
+if (!isset($_GET['id'])) {
+    die("Invoice ID not specified.");
+}
+
+$purchase_id = intval($_GET['id']);
+
+// Get Purchase Details
+$stmt = $conn->prepare("SELECT p.*, s.name as supplier_name, s.phone as supplier_phone, s.city as supplier_city 
+                        FROM purchases p 
+                        JOIN suppliers s ON p.supplier_id = s.id 
+                        WHERE p.id = ?");
+$stmt->bind_param("i", $purchase_id);
+$stmt->execute();
+$purchase = $stmt->get_result()->fetch_assoc();
+
+if (!$purchase) {
+    die("Invoice not found.");
+}
+
+// Get Purchase Items
+$stmt = $conn->prepare("SELECT pi.*, i.name as item_name, i.unit 
+                        FROM purchase_items pi 
+                        JOIN items i ON pi.item_id = i.id 
+                        WHERE pi.purchase_id = ?");
+$stmt->bind_param("i", $purchase_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$items = [];
+while ($row = $result->fetch_assoc()) {
+    $items[] = $row;
+}
+// Get Transaction History (Closing Balance at that time)
+$stmt = $conn->prepare("SELECT balance FROM transactions WHERE invoice_no = ? AND transaction_type = 'Purchase' LIMIT 1");
+$stmt->bind_param("s", $purchase['invoice_no']);
+$stmt->execute();
+$transResult = $stmt->get_result();
+
+$closing_balance = 0;
+$previous_balance = 0;
+$invoice_total_cost = $purchase['total_amount'] + $purchase['transport_expense'] + $purchase['other_expense'];
+
+if ($transResult->num_rows > 0) {
+    $trans = $transResult->fetch_assoc();
+    $closing_balance = $trans['balance'];
+    // Previous Balance = Closing Balance - (This Invoice Increase)
+    // Increase = Invoice Total - Paid
+    $invoice_increase = $invoice_total_cost - $purchase['payment_made'];
+    $previous_balance = $closing_balance - $invoice_increase;
+} else {
+    // Fallback if transaction record missing (old data)
+    $previous_balance = 0; 
+    $closing_balance = $purchase['balance']; 
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Purchase Invoice #<?php echo $purchase['invoice_no']; ?></title>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
+        .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, 0.15); }
+        .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .company-details { text-align: right; }
+        .company-title { font-size: 24px; font-weight: bold; color: #333; margin: 0; }
+        .invoice-title { font-size: 24px; font-weight: bold; color: #667eea; margin-top: 0; }
+        .info-table { width: 100%; margin-bottom: 20px; }
+        .info-table td { padding: 5px; vertical-align: top; }
+        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .items-table th, .items-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .items-table th { background-color: #f8f9fa; font-weight: bold; }
+        .totals-table { width: 50%; margin-left: auto; border-collapse: collapse; }
+        .totals-table td { padding: 8px; text-align: right; border-bottom: 1px solid #eee; }
+        .totals-table tr:last-child td { border-bottom: none; }
+        .grand-total { font-size: 18px; font-weight: bold; color: #667eea; }
+        .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 10px; }
+        @media print {
+            .no-print { display: none; }
+            .invoice-box { border: none; box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="text-align: right; max-width: 800px; margin: auto; margin-bottom: 10px;">
+        <button onclick="window.print()" style="padding: 10px 20px; background: #667eea; color: white; border: none; cursor: pointer; border-radius: 5px;">Print Invoice</button>
+        <button onclick="window.history.back()" style="padding: 10px 20px; background: #ddd; color: #333; border: none; cursor: pointer; border-radius: 5px; margin-left: 10px;">Back</button>
+    </div>
+
+    <div class="invoice-box">
+        <div class="header">
+            <div>
+                <h1 class="invoice-title">PURCHASE INVOICE</h1>
+                <p>Invoice #: <strong><?php echo $purchase['invoice_no']; ?></strong><br>
+                   Date: <?php echo date('d-M-Y', strtotime($purchase['purchase_date'])); ?></p>
+            </div>
+            <div class="company-details">
+                <h2 class="company-title"><?php echo COMPANY_NAME; ?></h2>
+                <p><?php echo COMPANY_ADDRESS; ?><br>
+                   Phone: <?php echo COMPANY_PHONE; ?><br>
+                   Email: <?php echo COMPANY_EMAIL; ?></p>
+            </div>
+        </div>
+
+        <table class="info-table">
+            <tr>
+                <td style="width: 50%;">
+                    <strong>Supplier:</strong><br>
+                    <?php echo htmlspecialchars($purchase['supplier_name']); ?><br>
+                    <?php echo htmlspecialchars($purchase['supplier_phone']); ?><br>
+                    <?php echo htmlspecialchars($purchase['supplier_city']); ?>
+                </td>
+                <td style="width: 50%; text-align: right;">
+                    <!-- Additional Info or Empty -->
+                </td>
+            </tr>
+        </table>
+
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Item Description</th>
+                    <th style="text-align: center;">Qty</th>
+                    <th style="text-align: right;">Rate</th>
+                    <th style="text-align: right;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($items as $item): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($item['item_name']); ?> <small>(<?php echo $item['unit']; ?>)</small></td>
+                    <td style="text-align: center;"><?php echo $item['quantity']; ?></td>
+                    <td style="text-align: right;"><?php echo number_format($item['rate'], 2); ?></td>
+                    <td style="text-align: right;"><?php echo number_format($item['amount'], 2); ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <table class="totals-table">
+            <tr>
+                <td><strong>Previous Balance:</strong></td>
+                <td><?php echo number_format($previous_balance, 2); ?></td>
+            </tr>
+            <tr>
+                <td><strong>Invoice Total (Items):</strong></td>
+                <td><?php echo number_format($purchase['total_amount'], 2); ?></td>
+            </tr>
+            <?php if($purchase['transport_expense'] > 0): ?>
+            <tr>
+                <td><strong>Transport Expense:</strong></td>
+                <td><?php echo number_format($purchase['transport_expense'], 2); ?></td>
+            </tr>
+            <?php endif; ?>
+            <?php if($purchase['other_expense'] > 0): ?>
+            <tr>
+                <td><strong>Other Expenses:</strong></td>
+                <td><?php echo number_format($purchase['other_expense'], 2); ?></td>
+            </tr>
+            <?php endif; ?>
+            
+            <tr style="border-top: 2px solid #ddd;">
+                <td><strong>Total Invoice Cost:</strong></td>
+                <td><strong><?php echo number_format($invoice_total_cost, 2); ?></strong></td>
+            </tr>
+
+            <tr>
+                <td><strong>Paid Amount:</strong></td>
+                <td><?php echo number_format($purchase['payment_made'], 2); ?></td>
+            </tr>
+            <tr>
+                <td><strong>Remaining (This Amount):</strong></td>
+                <td><?php echo number_format($invoice_total_cost - $purchase['payment_made'], 2); ?></td>
+            </tr>
+            <tr style="background-color: #f8f9fa;">
+                <td><strong>Total Remaining Balance:</strong></td>
+                <td class="grand-total"><?php echo number_format($closing_balance, 2); ?></td>
+            </tr>
+        </table>
+
+        <?php if (!empty($purchase['notes'])): ?>
+        <div style="margin-top: 20px; font-size: 14px; color: #555;">
+            <strong>Notes:</strong><br>
+            <?php echo nl2br(htmlspecialchars($purchase['notes'])); ?>
+        </div>
+        <?php endif; ?>
+
+        <div class="footer">
+            <p>Purchase Record - Internal Use Only</p>
+        </div>
+    </div>
+</body>
+</html>
