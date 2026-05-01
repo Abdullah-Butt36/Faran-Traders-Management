@@ -81,7 +81,26 @@ function Purchases() {
         }
       }
 
-      // 3. Delete Purchase
+      // 3. Fetch purchase details before deleting to revert supplier balance and ledger
+      const { data: purchaseToDel } = await supabase.from('purchases').select('supplier_id, balance, invoice_no').eq('id', id).single();
+      
+      if (purchaseToDel) {
+        // Revert Supplier Balance
+        if (purchaseToDel.supplier_id && purchaseToDel.balance) {
+          const { data: supplier } = await supabase.from('suppliers').select('current_balance').eq('id', purchaseToDel.supplier_id).single();
+          if (supplier) {
+            const revertedBalance = (parseFloat(supplier.current_balance) || 0) - parseFloat(purchaseToDel.balance);
+            await supabase.from('suppliers').update({ current_balance: revertedBalance }).eq('id', purchaseToDel.supplier_id);
+          }
+        }
+        
+        // Delete Ledger Entries
+        if (purchaseToDel.invoice_no) {
+          await supabase.from('transactions').delete().eq('invoice_no', purchaseToDel.invoice_no);
+        }
+      }
+
+      // 4. Delete Purchase Record
       const { error: deleteErr } = await supabase.from('purchases').delete().eq('id', id);
       if (deleteErr) throw deleteErr;
 

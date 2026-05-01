@@ -175,8 +175,47 @@ function PurchaseForm() {
         }
       }
 
-      // 4. Update Supplier Balance
-      if (!formData.isCash && balance !== 0 && formData.supplierId) {
+      // 4. Update Ledger & Supplier Balance
+      if (!formData.isCash && formData.supplierId) {
+        
+        // Ledger Entries
+        const ledgerEntries = [];
+        
+        // Purchase Bill (Credit - Payable to Supplier)
+        ledgerEntries.push({
+          transaction_type: 'Purchase',
+          party_type: 'Supplier',
+          party_id: formData.supplierId,
+          transaction_date: formData.date,
+          invoice_no: formData.invoiceNo,
+          description: `Purchase Invoice #${formData.invoiceNo}`,
+          debit: 0,
+          credit: grandTotal
+        });
+
+        // Payment Made (Debit - Reduces Payable)
+        const paymentAmount = parseFloat(formData.paidAmount) || 0;
+        if (paymentAmount > 0) {
+          ledgerEntries.push({
+            transaction_type: 'Payment',
+            party_type: 'Supplier',
+            party_id: formData.supplierId,
+            transaction_date: formData.date,
+            invoice_no: formData.invoiceNo,
+            description: `Payment against Invoice #${formData.invoiceNo}`,
+            debit: paymentAmount,
+            credit: 0
+          });
+        }
+
+        if (isEdit) {
+           await supabase.from('transactions').delete().eq('invoice_no', formData.invoiceNo);
+        }
+
+        const { error: ledgerError } = await supabase.from('transactions').insert(ledgerEntries);
+        if (ledgerError) throw ledgerError;
+
+        // Update Supplier Balance Table
         const { data: supplier } = await supabase
           .from('suppliers')
           .select('current_balance')

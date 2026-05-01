@@ -92,7 +92,26 @@ function Sales() {
         }
       }
 
-      // 3. Now delete the sale (sale_items will be deleted automatically due to CASCADE)
+      // 3. Fetch sale details to revert customer balance and ledger
+      const { data: saleToDel } = await supabase.from('sales').select('customer_id, balance, invoice_no').eq('id', id).single();
+
+      if (saleToDel) {
+        // Revert Customer Balance
+        if (saleToDel.customer_id && saleToDel.balance) {
+          const { data: customer } = await supabase.from('customers').select('current_balance').eq('id', saleToDel.customer_id).single();
+          if (customer) {
+            const revertedBalance = (parseFloat(customer.current_balance) || 0) - parseFloat(saleToDel.balance);
+            await supabase.from('customers').update({ current_balance: revertedBalance }).eq('id', saleToDel.customer_id);
+          }
+        }
+        
+        // Delete Ledger Entries
+        if (saleToDel.invoice_no) {
+          await supabase.from('transactions').delete().eq('invoice_no', saleToDel.invoice_no);
+        }
+      }
+
+      // 4. Now delete the sale (sale_items will be deleted automatically due to CASCADE)
       const { error: deleteErr } = await supabase.from('sales').delete().eq('id', id);
       if (deleteErr) throw deleteErr;
 

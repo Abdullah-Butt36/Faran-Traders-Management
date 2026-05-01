@@ -191,8 +191,47 @@ function SaleForm() {
         }
       }
 
-      // Update Customer Balance (If not cash and has balance)
-      if (!formData.isCash && balance !== 0 && formData.customerId) {
+      // Update Ledger & Customer Balance (If not cash)
+      if (!formData.isCash && formData.customerId) {
+        
+        // 1. Ledger Entries
+        const ledgerEntries = [];
+        
+        // Sale Bill (Debit)
+        ledgerEntries.push({
+          transaction_type: 'Sale',
+          party_type: 'Customer',
+          party_id: formData.customerId,
+          transaction_date: formData.date,
+          invoice_no: formData.invoiceNo,
+          description: `Sale Invoice #${formData.invoiceNo}`,
+          debit: grandTotal,
+          credit: 0
+        });
+
+        // Payment Received (Credit)
+        const paymentAmount = parseFloat(formData.paidAmount) || 0;
+        if (paymentAmount > 0) {
+          ledgerEntries.push({
+            transaction_type: 'Receipt',
+            party_type: 'Customer',
+            party_id: formData.customerId,
+            transaction_date: formData.date,
+            invoice_no: formData.invoiceNo,
+            description: `Payment against Invoice #${formData.invoiceNo}`,
+            debit: 0,
+            credit: paymentAmount
+          });
+        }
+
+        if (isEdit) {
+           await supabase.from('transactions').delete().eq('invoice_no', formData.invoiceNo);
+        }
+
+        const { error: ledgerError } = await supabase.from('transactions').insert(ledgerEntries);
+        if (ledgerError) throw ledgerError;
+
+        // 2. Update Customer Balance
         const { data: customer } = await supabase
           .from('customers')
           .select('current_balance')
@@ -200,6 +239,8 @@ function SaleForm() {
           .single();
         
         if (customer) {
+          // Note: If editing, a full recalculation of customer balance should ideally run.
+          // For now, we apply the net change or you can trigger a sync function later.
           const newCustBalance = (parseFloat(customer.current_balance) || 0) + balance;
           await supabase
             .from('customers')

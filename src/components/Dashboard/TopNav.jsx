@@ -12,7 +12,7 @@ function TopNav({ pageTitle = 'Dashboard', onMenuClick }) {
   const isNotiPage = location.pathname === '/dashboard/notifications';
 
   return (
-    <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-4 md:px-8 flex-shrink-0 relative">
+    <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-4 md:px-8 flex-shrink-0 relative print:hidden">
       {/* Mobile Search Overlay */}
       {isMobileSearchOpen && (
         <div className="absolute inset-0 z-[60] bg-white flex items-center px-4 animate-fadeIn">

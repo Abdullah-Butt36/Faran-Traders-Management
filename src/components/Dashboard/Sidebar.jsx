@@ -19,7 +19,7 @@ function Sidebar({ isOpen, setIsOpen }) {
   ];
 
   return (
-    <aside className={`fixed lg:static inset-y-0 left-0 w-64 bg-slate-900 text-slate-400 border-r border-slate-800 flex flex-col z-[100] transition-transform duration-300 transform ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} flex-shrink-0`}>
+    <aside className={`fixed lg:static inset-y-0 left-0 w-64 bg-slate-900 text-slate-400 border-r border-slate-800 flex flex-col z-[100] transition-transform duration-300 transform ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} flex-shrink-0 print:hidden`}>
       <div className="p-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">

@@ -92,11 +92,16 @@ function Ledger() {
     const debit = parseFloat(t.debit || 0);
     const credit = parseFloat(t.credit || 0);
     
+    // Core Accounting Logic:
+    // Customer: Debit (Sale) increases what they owe us. Credit (Receipt) decreases it.
+    // Supplier: Credit (Purchase) increases what we owe them. Debit (Payment) decreases it.
+    const netAmount = partyType === 'Customer' ? (debit - credit) : (credit - debit);
+    
     if (t.transaction_date < startDate) {
-      periodOpeningBalance += (debit - credit);
+      periodOpeningBalance += netAmount;
       runningBalance = periodOpeningBalance;
     } else {
-      runningBalance += (debit - credit);
+      runningBalance += netAmount;
       periodTransactions.push({
         id: t.id,
         raw_type: t.transaction_type,
@@ -113,6 +118,16 @@ function Ledger() {
   const totalDebit = periodTransactions.reduce((s, t) => s + t.debit, 0);
   const totalCredit = periodTransactions.reduce((s, t) => s + t.credit, 0);
   const closingBalance = runningBalance;
+
+  // Helpers for UI display
+  const getBalType = (bal) => {
+    if (bal === 0) return '';
+    if (partyType === 'Customer') return bal > 0 ? 'Dr' : 'Cr';
+    return bal > 0 ? 'Cr' : 'Dr';
+  };
+
+  const isOpDebit = partyType === 'Customer' ? periodOpeningBalance > 0 : periodOpeningBalance < 0;
+  const isOpCredit = partyType === 'Supplier' ? periodOpeningBalance > 0 : periodOpeningBalance < 0;
 
   const handleSaveEntry = async (e) => {
     e.preventDefault();
@@ -136,7 +151,16 @@ function Ledger() {
         credit: creditVal
       };
       
+      // Calculate Balance Delta
+      const newNetAmount = partyType === 'Customer' ? (debitVal - creditVal) : (creditVal - debitVal);
+      let balanceDelta = newNetAmount;
+
       if (modalMode === 'edit') {
+        const oldDebit = parseFloat(editEntryData.debit || 0);
+        const oldCredit = parseFloat(editEntryData.credit || 0);
+        const oldNetAmount = partyType === 'Customer' ? (oldDebit - oldCredit) : (oldCredit - oldDebit);
+        balanceDelta = newNetAmount - oldNetAmount;
+
         const { error } = await supabase.from('transactions').update(payload).eq('id', editEntryData.id);
         if (error) throw error;
         toast.success('Entry updated');
@@ -146,6 +170,16 @@ function Ledger() {
         toast.success('Entry added successfully');
       }
       
+      // Update Cached Party Balance
+      if (balanceDelta !== 0) {
+        const table = partyType === 'Customer' ? 'customers' : 'suppliers';
+        const { data: party } = await supabase.from(table).select('current_balance').eq('id', selectedParty).single();
+        if (party) {
+          const updatedBalance = (parseFloat(party.current_balance) || 0) + balanceDelta;
+          await supabase.from(table).update({ current_balance: updatedBalance }).eq('id', selectedParty);
+        }
+      }
+
       setShowModal(false);
       fetchTransactions();
     } catch (error) {
@@ -153,11 +187,26 @@ function Ledger() {
     }
   };
 
-  const handleDeleteEntry = async (id) => {
+  const handleDeleteEntry = async (trans) => {
     if (!window.confirm('Are you sure you want to delete this manual entry?')) return;
     try {
-      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      const { error } = await supabase.from('transactions').delete().eq('id', trans.id);
       if (error) throw error;
+
+      // Revert Cached Party Balance
+      const debitVal = parseFloat(trans.debit || 0);
+      const creditVal = parseFloat(trans.credit || 0);
+      const oldNetAmount = partyType === 'Customer' ? (debitVal - creditVal) : (creditVal - debitVal);
+
+      if (oldNetAmount !== 0) {
+        const table = partyType === 'Customer' ? 'customers' : 'suppliers';
+        const { data: party } = await supabase.from(table).select('current_balance').eq('id', selectedParty).single();
+        if (party) {
+          const updatedBalance = (parseFloat(party.current_balance) || 0) - oldNetAmount;
+          await supabase.from(table).update({ current_balance: updatedBalance }).eq('id', selectedParty);
+        }
+      }
+
       toast.success('Entry deleted');
       fetchTransactions();
     } catch (error) {
@@ -302,15 +351,15 @@ function Ledger() {
                   </td>
                   <td className="px-0 md:px-6 py-1 md:py-4 flex justify-between items-center md:text-right border-none">
                     <span className="md:hidden text-[10px] font-black text-slate-400 uppercase tracking-widest">Debit</span>
-                    <span>{periodOpeningBalance >= 0 ? periodOpeningBalance.toLocaleString() : '-'}</span>
+                    <span>{isOpDebit ? Math.abs(periodOpeningBalance).toLocaleString() : '-'}</span>
                   </td>
                   <td className="px-0 md:px-6 py-1 md:py-4 flex justify-between items-center md:text-right border-none">
                     <span className="md:hidden text-[10px] font-black text-slate-400 uppercase tracking-widest">Credit</span>
-                    <span>{periodOpeningBalance < 0 ? Math.abs(periodOpeningBalance).toLocaleString() : '-'}</span>
+                    <span>{isOpCredit ? Math.abs(periodOpeningBalance).toLocaleString() : '-'}</span>
                   </td>
                   <td className="px-0 md:px-6 py-1 md:py-4 flex justify-between items-center md:text-right border-none font-black">
                     <span className="md:hidden text-[10px] font-black text-slate-400 uppercase tracking-widest">Net Bal</span>
-                    <span>{Math.abs(periodOpeningBalance).toLocaleString()} {periodOpeningBalance >= 0 ? 'Dr' : 'Cr'}</span>
+                    <span>{Math.abs(periodOpeningBalance).toLocaleString()} <span className="text-[9px] text-slate-400 font-bold uppercase">{getBalType(periodOpeningBalance)}</span></span>
                   </td>
                   <td className="no-print"></td>
                 </tr>
@@ -342,7 +391,7 @@ function Ledger() {
                     <td className="px-0 md:px-6 py-2 md:py-4 md:table-cell flex justify-between items-center md:text-right border-none">
                       <span className="md:hidden text-[10px] font-black text-slate-400 uppercase tracking-widest">Running Bal</span>
                       <div className="font-black text-slate-900 text-base md:text-sm">
-                        {Math.abs(trans.balance).toLocaleString()} <span className="text-[9px] text-slate-400 font-bold uppercase">{trans.balance >= 0 ? 'Dr' : 'Cr'}</span>
+                        {Math.abs(trans.balance).toLocaleString()} <span className="text-[9px] text-slate-400 font-bold uppercase">{getBalType(trans.balance)}</span>
                       </div>
                     </td>
 
@@ -357,7 +406,7 @@ function Ledger() {
                             <span className="md:hidden ml-2 font-bold text-xs">Edit</span>
                           </button>
                           <button 
-                            onClick={() => handleDeleteEntry(trans.id)}
+                            onClick={() => handleDeleteEntry(trans)}
                             className="h-10 px-4 md:w-8 md:h-8 flex items-center justify-center bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-xl md:rounded-lg transition-all border border-rose-100"
                           >
                             <i className="fas fa-trash-alt md:text-xs"></i>
@@ -393,7 +442,7 @@ function Ledger() {
                   <td className="px-0 md:px-8 py-1 md:py-6 flex justify-between md:justify-end items-center md:text-right text-lg md:text-xl border-none">
                     <span className="md:hidden text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Net Due</span>
                     <span className="whitespace-nowrap">
-                      ₨ {Math.abs(closingBalance).toLocaleString()} {closingBalance >= 0 ? 'Dr' : 'Cr'}
+                      ₨ {Math.abs(closingBalance).toLocaleString()} <span className="text-[12px] opacity-75">{getBalType(closingBalance)}</span>
                     </span>
                   </td>
                   <td className="hidden md:table-cell no-print"></td>
@@ -509,11 +558,35 @@ function Ledger() {
         .animate-slideUp { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         
         @media print {
+          @page { margin: 1cm; size: A4 portrait; }
+          body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
-          body { background: white !important; }
-          .bg-white { box-shadow: none !important; border: none !important; }
-          .main-content { padding: 0 !important; }
-          .rounded-[32px] { border-radius: 12px !important; }
+          
+          /* Override container styles for full width */
+          .main-content, .bg-white { padding: 0 !important; margin: 0 !important; box-shadow: none !important; border: none !important; }
+          
+          /* Force standard table display for print */
+          table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
+          thead { display: table-header-group !important; }
+          tbody { display: table-row-group !important; }
+          tfoot { display: table-footer-group !important; }
+          tr { display: table-row !important; page-break-inside: avoid !important; }
+          td, th { display: table-cell !important; border-bottom: 1px solid #e2e8f0 !important; padding: 12px 8px !important; }
+          
+          /* Hide mobile labels */
+          .md\\:hidden { display: none !important; }
+          
+          /* Preserve colors */
+          .bg-slate-900 { background-color: #0f172a !important; color: white !important; }
+          .bg-slate-50 { background-color: #f8fafc !important; }
+          .text-rose-600 { color: #e11d48 !important; }
+          .text-emerald-600 { color: #059669 !important; }
+          
+          /* Fix text alignments */
+          th { text-align: right !important; }
+          th:first-child { text-align: left !important; }
+          td { text-align: right !important; vertical-align: middle !important; }
+          td:first-child { text-align: left !important; }
         }
       `}</style>
     </DashboardLayout>
